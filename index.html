@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMS Gateway</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #f5f5f5;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --border: #dddddd;
+            --primary: #007bff;
+            --primary-hover: #0056b3;
+            --success: #28a745;
+            --error: #dc3545;
+            --secondary: #6c757d;
+        }
+
+        body.dark {
+            --bg: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text: #e0e0e0;
+            --border: #444444;
+            --primary: #0d6efd;
+            --primary-hover: #0a58ca;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 20px;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 28px;
+        }
+
+        .theme-toggle {
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            color: var(--text);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--primary);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 16px;
+            background: var(--bg);
+            color: var(--text);
+            transition: border-color 0.3s;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+        }
+
+        .char-counter {
+            text-align: right;
+            font-size: 12px;
+            color: var(--secondary);
+            margin-top: 4px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 8px;
+            display: none;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .status.success {
+            background: var(--success);
+            color: white;
+            display: block;
+        }
+
+        .status.error {
+            background: var(--error);
+            color: white;
+            display: block;
+        }
+
+        .status.loading {
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-text {
+            color: var(--error);
+            font-size: 12px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 12px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 SMS Gateway</h1>
+            <button class="theme-toggle" onclick="toggleTheme()">🌓 Theme</button>
+        </div>
+
+        <div class="card">
+            <form id="smsForm">
+                <div class="form-group">
+                    <label for="gatewayUrl">Gateway URL</label>
+                    <input type="text" id="gatewayUrl" placeholder="http://192.168.1.10:8080/send" required>
+                    <div class="error-text" id="gatewayError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="phoneNumber">Phone Number</label>
+                    <input type="tel" id="phoneNumber" placeholder="+1234567890" required>
+                    <div class="error-text" id="phoneError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="message">Message</label>
+                    <textarea id="message" placeholder="Enter your message here..." required></textarea>
+                    <div class="char-counter"><span id="charCount">0</span> characters</div>
+                    <div class="error-text" id="messageError"></div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn-primary">Send SMS</button>
+                    <button type="button" class="btn-secondary" onclick="clearForm()">Clear Form</button>
+                </div>
+            </form>
+
+            <div id="status" class="status"></div>
+        </div>
+    </div>
+
+    <script>
+        // Load saved data from localStorage
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedGateway = localStorage.getItem('gatewayUrl');
+            const savedPhone = localStorage.getItem('phoneNumber');
+            const savedTheme = localStorage.getItem('theme');
+
+            if (savedGateway) document.getElementById('gatewayUrl').value = savedGateway;
+            if (savedPhone) document.getElementById('phoneNumber').value = savedPhone;
+            if (savedTheme === 'dark') document.body.classList.add('dark');
+        });
+
+        // Character counter
+        document.getElementById('message').addEventListener('input', (e) => {
+            document.getElementById('charCount').textContent = e.target.value.length;
+        });
+
+        // Form submission
+        document.getElementById('smsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Clear previous errors
+            document.querySelectorAll('.error-text').forEach(el => el.style.display = 'none');
+
+            const gatewayUrl = document.getElementById('gatewayUrl').value.trim();
+            const phoneNumber = document.getElementById('phoneNumber').value.trim();
+            const message = document.getElementById('message').value.trim();
+
+            // Validate inputs
+            let isValid = true;
+
+            if (!gatewayUrl) {
+                showError('gatewayError', 'Gateway URL is required');
+                isValid = false;
+            }
+
+            if (!phoneNumber || !/^\+?\d{10,}$/.test(phoneNumber.replace(/[\s-]/g, ''))) {
+                showError('phoneError', 'Phone number must be at least 10 digits');
+                isValid = false;
+            }
+
+            if (!message) {
+                showError('messageError', 'Message cannot be empty');
+                isValid = false;
+            }
+
+            if (!isValid) return;
+
+            // Save to localStorage
+            localStorage.setItem('gatewayUrl', gatewayUrl);
+            localStorage.setItem('phoneNumber', phoneNumber);
+
+            // Show loading
+            showStatus('loading', 'Sending message...');
+            disableForm(true);
+
+            try {
+                // Encode parameters
+                const encodedPhone = encodeURIComponent(phoneNumber);
+                const encodedMessage = encodeURIComponent(message);
+                const url = `${gatewayUrl}?number=${encodedPhone}&message=${encodedMessage}`;
+
+                // Send request
+                const response = await fetch(url, {
+                    method: 'GET',
+                    mode: 'no-cors' // Required for cross-origin requests to local devices
+                });
+
+                // Note: no-cors mode doesn't allow reading response, so we assume success
+                showStatus('success', '✓ Message sent successfully!');
+                
+                // Auto-hide success message after 5 seconds
+                setTimeout(() => {
+                    document.getElementById('status').style.display = 'none';
+                }, 5000);
+
+            } catch (error) {
+                showStatus('error', `✗ Failed to send message: ${error.message}`);
+            } finally {
+                disableForm(false);
+            }
+        });
+
+        function showError(elementId, message) {
+            const errorEl = document.getElementById(elementId);
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+
+        function showStatus(type, message) {
+            const statusEl = document.getElementById('status');
+            statusEl.className = `status ${type}`;
+            
+            if (type === 'loading') {
+                statusEl.innerHTML = `<div class="spinner"></div><span>${message}</span>`;
+            } else {
+                statusEl.textContent = message;
+            }
+        }
+
+        function disableForm(disabled) {
+            document.querySelectorAll('input, textarea, button').forEach(el => {
+                el.disabled = disabled;
+            });
+        }
+
+        function clearForm() {
+            document.getElementById('phoneNumber').value = '';
+            document.getElementById('message').value = '';
+            document.getElementById('charCount').textContent = '0';
+            document.getElementById('status').style.display = 'none';
+            document.querySelectorAll('.error-text').forEach(el => el.style.display = 'none');
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark');
+            const isDark = document.body.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+    </script>
+</body>
+</html>
